@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path C:\\\\dev\\\\fish-tracker)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "PowerShell([System.IO.File]::ReadAllText\\(\"C:\\\\dev\\\\fish-tracker\\\\src\\\\__init__.py\"\\) | Write-Output)"
+    ]
+  }
+}

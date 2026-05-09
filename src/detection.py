@@ -67,6 +67,13 @@ def detect_frame(
             w (int):   bounding-box width in pixels.
             h (int):   bounding-box height in pixels.
             area (float): contour area in pixels².
+            major_axis_px (float): major ellipse axis in pixels; NaN when the
+                contour has fewer than 5 points (cv2.fitEllipse minimum).
+            minor_axis_px (float): minor ellipse axis in pixels; NaN as above.
+            orientation_deg (float): ellipse tilt in degrees [0, 180) per
+                OpenCV fitEllipse convention; NaN as above.
+            mean_intensity (float): mean grayscale pixel value inside the
+                contour boundary, sampled from frame_gray.
         Empty list when no detections pass the area filter.
     """
     raw_mask = bg_subtractor.apply(frame_gray, learningRate=0)
@@ -82,6 +89,7 @@ def detect_frame(
     contours, _ = cv2.findContours(clean_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     detections: list[dict] = []
+    contour_mask = np.zeros(frame_gray.shape, dtype=np.uint8)
     for contour in contours:
         area = cv2.contourArea(contour)
         if not (cfg.MIN_AREA <= area <= cfg.MAX_AREA):
@@ -93,7 +101,29 @@ def detect_frame(
         x = M["m10"] / M["m00"]
         y = M["m01"] / M["m00"]
         _, _, bw, bh = cv2.boundingRect(contour)
-        detections.append({"x": x, "y": y, "w": bw, "h": bh, "area": area})
+        if len(contour) >= 5:
+            (_, _), (axis_a, axis_b), angle = cv2.fitEllipse(contour)
+            major_axis = float(max(axis_a, axis_b))
+            minor_axis = float(min(axis_a, axis_b))
+            orientation = float(angle)
+            if not (np.isfinite(major_axis) and np.isfinite(minor_axis)):
+                major_axis = float("nan")
+                minor_axis = float("nan")
+                orientation = float("nan")
+        else:
+            major_axis = float("nan")
+            minor_axis = float("nan")
+            orientation = float("nan")
+        contour_mask[:] = 0
+        cv2.drawContours(contour_mask, [contour], 0, 255, thickness=-1)
+        mean_intensity = float(cv2.mean(frame_gray, mask=contour_mask)[0])
+        detections.append({
+            "x": x, "y": y, "w": bw, "h": bh, "area": area,
+            "major_axis_px": major_axis,
+            "minor_axis_px": minor_axis,
+            "orientation_deg": orientation,
+            "mean_intensity": mean_intensity,
+        })
 
     return detections
 
@@ -120,12 +150,16 @@ def run_detection(video_path: Path, progress: bool = True) -> pd.DataFrame:
 
     Returns:
         DataFrame with columns:
-            frame (int64): 0-indexed original video frame number.
-            x (float64):   moment-centroid column in pixels.
-            y (float64):   moment-centroid row in pixels.
-            w (int64):     bounding-box width in pixels.
-            h (int64):     bounding-box height in pixels.
-            area (float64): contour area in pixels².
+            frame (int64):         0-indexed original video frame number.
+            x (float64):           moment-centroid column in pixels.
+            y (float64):           moment-centroid row in pixels.
+            w (int64):             bounding-box width in pixels.
+            h (int64):             bounding-box height in pixels.
+            area (float64):        contour area in pixels².
+            major_axis_px (float64): major ellipse axis; NaN when <5 contour pts.
+            minor_axis_px (float64): minor ellipse axis; NaN as above.
+            orientation_deg (float64): ellipse tilt [0, 180°); NaN as above.
+            mean_intensity (float64): mean grayscale value inside the contour.
     """
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -161,7 +195,9 @@ def run_detection(video_path: Path, progress: bool = True) -> pd.DataFrame:
 
     return pd.DataFrame(
         rows,
-        columns=["frame", "x", "y", "w", "h", "area"],
+        columns=["frame", "x", "y", "w", "h", "area",
+                 "major_axis_px", "minor_axis_px", "orientation_deg",
+                 "mean_intensity"],
     )
 
 
@@ -190,4 +226,16 @@ if __name__ == "__main__":
     print(f"Total detections      : {len(df):,}")
     print(f"Mean / frame          : {mean_per_frame:.1f}")
     print(f"Zero-detection frames : {zero_det_frames} / {post_warmup}")
+    if not df.empty and "major_axis_px" in df.columns:
+        n_valid = int(df["major_axis_px"].notna().sum())
+        n_nan = len(df) - n_valid
+        print(f"Ellipse fits (valid)  : {n_valid} / {len(df)} ({100 * n_valid / len(df):.1f}%)")
+        print(f"Inf/NaN ellipse fits  : {n_nan} (will not contribute to size stats)")
+        print(f"Mean major axis       : {df['major_axis_px'].mean():.1f} px")
+    if not df.empty and "mean_intensity" in df.columns:
+        iv = df["mean_intensity"]
+        p5, p25, p50, p75, p95 = np.percentile(iv, [5, 25, 50, 75, 95])
+        print(f"Intensity min         : {iv.min():.1f}")
+        print(f"Intensity p5/p25/p50  : {p5:.1f} / {p25:.1f} / {p50:.1f}")
+        print(f"Intensity p75/p95/max : {p75:.1f} / {p95:.1f} / {iv.max():.1f}")
     print(f"Runtime               : {elapsed:.1f}s")

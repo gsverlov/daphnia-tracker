@@ -43,3 +43,18 @@ MAX_AREA: float = 300.0  # TUNED IN PHASE A — contours larger than this are cl
 TRACK_MAX_AGE: int = 5             # TUNED IN PHASE C — frames a track survives without a match
 TRACK_MIN_HITS: int = 3            # TUNED IN PHASE C — detections needed to confirm a track
 TRACK_MAX_DISTANCE: float = 30.0   # TUNED IN PHASE C — max centroid distance (px) for assignment
+
+# ---------------------------------------------------------------------------
+# Analysis thresholds — placeholder values, review after Phase D outputs exist.
+# Reference: at ~20 fps, max Daphnia speed ~10 px/frame ≈ 200 px/s.
+# ---------------------------------------------------------------------------
+HOP_THRESHOLD_PX_S: float = 100.0         # TUNED IN PHASE D — speed above this counts as a hop event
+MOBILITY_THRESHOLD_PX_S: float = 20.0     # TUNED IN PHASE D — speed above this counts as "active"
+MIN_TRACKLET_FRAMES_FOR_SUMMARY: int = 5  # TUNED IN PHASE D — tracklets shorter than this excluded from population stats
+HEATMAP_BIN_SIZE: int = 20                # TUNED IN PHASE D — pixels per heatmap bin
+
+# ---------------------------------------------------------------------------
+# Cho et al. 2022 behavioural features — set in Phase D.5
+# ---------------------------------------------------------------------------
+FWDRUN_THRESHOLD_MULTIPLIER: float = 1.5     # TUNED IN PHASE D.5 — FwdRun: speed > N×population mean speed
+MIN_DISPLACEMENT_FOR_HEADING_PX: float = 1.0  # TUNED IN PHASE D.5 — min step length (px) counted for heading
