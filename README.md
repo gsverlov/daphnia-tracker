@@ -72,8 +72,6 @@ The parameters most sensitive to a new video are `MOG2_VAR_THRESHOLD`, `MIN_AREA
 ## Diagnostic tools
 
 - `src/compare_frames.py` — extracts a fixed set of frames (100, 200, 300) and writes side-by-side raw / annotated PNG pairs. Useful for spot-checking detection and tracking on representative moments.
-- `src/tune_contrast.py` — sweeps the shadow-filter `margin` / `zone_width` parameters and renders annotated videos for each setting. **Partially out of date**: it does not exercise watershed splitting, the right-side shadow filter, or the degenerate-ellipse filter — those were added to `src/detection.py` after the tuning sweep was written. Use for shadow-filter exploration only.
-
 ## Known limitations
 
 - Identity is occasionally swapped when two or more Daphnia pass within ~10 px of each other. Size-aware association reduces but does not eliminate this, and severe clumps still produce occasional ID switches.
