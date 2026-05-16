@@ -3,7 +3,13 @@
     "allow": [
       "Bash(Get-ChildItem -Path C:\\\\dev\\\\fish-tracker)",
       "Bash(Select-Object Name, PSIsContainer)",
-      "PowerShell([System.IO.File]::ReadAllText\\(\"C:\\\\dev\\\\fish-tracker\\\\src\\\\__init__.py\"\\) | Write-Output)"
+      "PowerShell([System.IO.File]::ReadAllText\\(\"C:\\\\dev\\\\fish-tracker\\\\src\\\\__init__.py\"\\) | Write-Output)",
+      "Bash(python -c \"from src import detection; print\\('OK', detection.detect_frame.__name__, detection._split_by_watershed.__name__\\)\")",
+      "Bash(.venv/Scripts/python.exe -m src.analysis)",
+      "Bash(.venv/Scripts/python.exe *)",
+      "Bash(echo \"===DETECTION EXIT: $? ===\")",
+      "Read(//tmp/**)",
+      "Bash(echo \"===TRACKING EXIT: $? ===\")"
     ]
   }
 }
